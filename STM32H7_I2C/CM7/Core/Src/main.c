@@ -19,7 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "myprintf.h"
-
+#include "rtc_clock.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -36,6 +36,7 @@
 #ifndef HSEM_ID_0
 #define HSEM_ID_0 (0U) /* HW semaphore 0*/
 #endif
+#define RTC_I2C_address (0x68<<1)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -130,105 +131,33 @@ Error_Handler();
 
   /* USER CODE END 2 */
 
-  uint16_t RTC_I2C_address = 0x68 << 1;
   uint8_t buffer;
   uint8_t time_d, time_t, seconds, minutes, hours, date, month, year;
-  uint8_t set_buffer[] = {0x40, 0x59, 0x23, 0x00, 0x31, 0x12, 0x22};
+  struct datetime curr_date;
+  printf("Starting");
 
-  for(int i = 0; i < 7; i++){
-	  HAL_I2C_Mem_Write(&hi2c2, RTC_I2C_address, (uint16_t)i, 1, &set_buffer[i], 1, 1000);
-  }
+  RTC_Init(&hi2c2);
+  curr_date.second = 0;
+  curr_date.minute = 27;
+  curr_date.hour = 15;
+  curr_date.dayotw = 2;
+  curr_date.day = 11;
+  curr_date.month = 9;
+  curr_date.year = 23;
+
+  RTC_SetAll(&curr_date);
 
   while ( 1 ){
+	  RTC_GetAll(&curr_date);
 
-    HAL_I2C_Master_Transmit(&hi2c2, RTC_I2C_address, 0x00, 1, 1000);
-    HAL_I2C_Mem_Read(&hi2c2, RTC_I2C_address + 1, 0x00, 1, &buffer, 1, 1000);
+	  printf("Time: %d:%d:%d \r\n", curr_date.hour, curr_date.minute, curr_date.second);
 
-    time_d = buffer;
-    time_d &= 0b1110000;
-    time_d = time_d >> 4;
-    time_d *= 10;
+	  printf("Date: %d:%d:%d \r\n", curr_date.day, curr_date.month, curr_date.year);
 
-    time_t = buffer;
-    time_t &= 0b0001111;
+	  HAL_Delay(1000);
 
-    seconds = time_d + time_t;
-
-    HAL_I2C_Master_Transmit(&hi2c2, RTC_I2C_address, 0x01, 1, 1000);
-    HAL_I2C_Mem_Read(&hi2c2, RTC_I2C_address + 1, 0x01, 1, &buffer, 1, 1000);
-       //buffer &= 127;
-    time_d = buffer;
-    time_d &= 0b1110000;
-    time_d = time_d >> 4;
-    time_d *= 10;
-
-    time_t = buffer;
-    time_t &= 0b0001111;
-
-    minutes = time_d + time_t;
-
-    HAL_I2C_Master_Transmit(&hi2c2, RTC_I2C_address, 0x02, 1, 1000);
-    HAL_I2C_Mem_Read(&hi2c2, RTC_I2C_address + 1, 0x02, 1, &buffer, 1, 1000);
-
-    time_d = buffer;
-    time_d &= 0b00110000;
-    time_d = time_d >> 4;
-    time_d *= 10;
-
-    time_t = buffer;
-    time_t &= 0b0001111;
-
-    hours = time_d + time_t;
-
-    printf("Time: %d:%d:%d \r\n", hours, minutes, seconds);
-
-    //Date
-
-    HAL_I2C_Master_Transmit(&hi2c2, RTC_I2C_address, 0x04, 1, 1000);
-    HAL_I2C_Mem_Read(&hi2c2, RTC_I2C_address + 1, 0x04, 1, &buffer, 1, 1000);
-
-    time_d = buffer;
-    time_d &= 0b00110000;
-    time_d = time_d >> 4;
-    time_d *= 10;
-
-    time_t = buffer;
-    time_t &= 0b0001111;
-
-    date = time_d + time_t;
-
-    HAL_I2C_Master_Transmit(&hi2c2, RTC_I2C_address, 0x05, 1, 1000);
-    HAL_I2C_Mem_Read(&hi2c2, RTC_I2C_address + 1, 0x05, 1, &buffer, 1, 1000);
-
-    time_d = buffer;
-    time_d &= 0b00010000;
-    time_d = time_d >> 4;
-    time_d *= 10;
-
-    time_t = buffer;
-    time_t &= 0b0001111;
-
-    month = time_d + time_t;
-
-    HAL_I2C_Master_Transmit(&hi2c2, RTC_I2C_address, 0x06, 1, 1000);
-    HAL_I2C_Mem_Read(&hi2c2, RTC_I2C_address + 1, 0x06, 1, &buffer, 1, 1000);
-
-    time_d = buffer;
-    time_d &= 0b11110000;
-    time_d = time_d >> 4;
-    time_d *= 10;
-
-    time_t = buffer;
-    time_t &= 0b0001111;
-
-    year = time_d + time_t;
-
-    printf("Date: %d:%d:%d \r\n", date, month, year);
-
-    HAL_Delay(500);
   }
 }
-
 /**
   * @brief System Clock Configuration
   * @retval None
